@@ -9,7 +9,8 @@ def show():
     st.header("Operations Dashboard")
 
     # --- Fetch Data & calculate defaults ---
-    raw_logs = get_logs()
+    with st.spinner("Loading Operations Data..."):
+        raw_logs = get_logs()
     
     # Process basic DF for defaults (before filtering)
     df = pd.DataFrame(raw_logs)
@@ -116,6 +117,8 @@ def show():
     
     # Calories KPI
     metric_cal = 0
+    label_cal = "Calories" # Default label
+    
     if not exercise_df.empty:
         total_calories = exercise_df['calories'].sum()
         if is_all_time:
@@ -126,10 +129,12 @@ def show():
             label_cal = "Avg Calories / Day"
 
     with col2:
-        st.metric(label=label_cal if exercise_df.empty or metric_cal > 0 else "Calories", value=f"{metric_cal} kcal")
+        st.metric(label=label_cal, value=f"{metric_cal} kcal")
 
     # Avg/Total Meditation Minutes KPI
     metric_med = 0
+    label_med = "Meditation" # Default label
+    
     if not meditation_df.empty:
         total_meditation = meditation_df['duration_minutes'].sum()
         if is_all_time:
@@ -140,7 +145,7 @@ def show():
             label_med = "Avg Meditation / Day"
 
     with col3:
-        st.metric(label=label_med if meditation_df.empty or metric_med > 0 else "Meditation", value=f"{metric_med} min")
+        st.metric(label=label_med, value=f"{metric_med} min")
 
     # --- Charts ---
     

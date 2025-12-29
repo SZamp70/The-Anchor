@@ -1,8 +1,6 @@
 import streamlit as st
 import os
 from modules import dashboard, meditation, exercise
-
-# --- Configuration ---
 st.set_page_config(
     page_title="The Anchor",
     page_icon="⚓",
@@ -88,6 +86,14 @@ def show_app():
         st.markdown("---")
         menu_selection = st.radio("Navigation", ["Dashboard", "Meditation", "Exercise"], index=0)
         
+        st.markdown("---")
+        
+        # Network Control
+        if st.toggle("Work Offline", value=False):
+            st.session_state['force_offline'] = True
+        else:
+            st.session_state['force_offline'] = False
+
         st.markdown("---")
         if st.button("Logout"):
             st.session_state['authenticated'] = False

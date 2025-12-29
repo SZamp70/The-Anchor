@@ -9,12 +9,19 @@ import os
 # Check if app is already initialized to avoid errors on reload
 if not firebase_admin._apps:
     try:
-        # Load credentials from key file
-        if os.path.exists("firebase-key.json"):
+        # 1. Try Streamlit Secrets (Cloud / Production)
+        # Expected format: st.secrets["textkey"] contains the JSON string of the key
+        if "textkey" in st.secrets:
+            key_dict = json.loads(st.secrets["textkey"])
+            cred = credentials.Certificate(key_dict)
+            firebase_admin.initialize_app(cred)
+        
+        # 2. Try Local File (Development)
+        elif os.path.exists("firebase-key.json"):
             cred = credentials.Certificate("firebase-key.json")
             firebase_admin.initialize_app(cred)
         else:
-            st.warning("⚠️ firebase-key.json not found. Using Offline Mode.")
+            st.warning("⚠️ firebase-key.json not found & no secrets. Using Offline Mode.")
     except Exception as e:
         st.error(f"Failed to initialize Firebase: {e}")
 
@@ -39,7 +46,7 @@ def save_log(data: dict):
     data['date_str'] = datetime.datetime.now().strftime("%Y-%m-%d")
     
     # Try Cloud Firestore
-    if db is not None:
+    if db is not None and not st.session_state.get('force_offline', False):
         try:
             # Add a server timestamp
             data['timestamp'] = firestore.SERVER_TIMESTAMP
@@ -66,20 +73,26 @@ def get_logs(start_date=None, end_date=None, limit=None):
     logs = []
     
     # 1. Fetch from Firestore if available
-    if db is not None:
+    # Check manual offline override
+    if db is not None and not st.session_state.get('force_offline', False):
         try:
             query = db.collection(COLLECTION_NAME).order_by('timestamp', direction=firestore.Query.DESCENDING)
             if limit:
                 query = query.limit(limit)
                 
-            docs = query.stream()
+            # Use get() for blocking retrieval (safer against stream hangs)
+            # This fetches all logic snapshots at once
+            docs = query.get(timeout=5)
             for doc in docs:
                 log_data = doc.to_dict()
                 if 'timestamp' in log_data and log_data['timestamp']:
                     log_data['datetime'] = log_data['timestamp']
                 logs.append(log_data)
-        except Exception:
-            # Allow fallback to continue
+        except Exception as e:
+            # Show error to user to diagnose
+            st.error(f"DB Error (Switching to Offline): {e}")
+            # Auto-switch to offline to prevent further hangs
+            st.session_state['force_offline'] = True
             pass
             
     # 2. Fetch from Local Session
