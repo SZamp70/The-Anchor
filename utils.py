@@ -10,8 +10,7 @@ import os
 # Check if app is already initialized to avoid errors on reload
 # Check if app is already initialized to avoid errors on reload
 # --- Firestore Setup ---
-# DEBUG MODE: Firebase disabled to test deployment
-if False: # not firebase_admin._apps:
+if not firebase_admin._apps:
     try:
         # 1. Try Streamlit Secrets (Cloud / Production)
         if "firebase" in st.secrets:
@@ -38,7 +37,7 @@ if False: # not firebase_admin._apps:
 
 try:
     # Attempt to get client, but handle failure gracefully
-    if False: # firebase_admin._apps:
+    if firebase_admin._apps:
         db = firestore.client()
     else:
         db = None
