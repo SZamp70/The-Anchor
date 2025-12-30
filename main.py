@@ -1,6 +1,5 @@
 import streamlit as st
 import os
-from modules import dashboard, meditation, exercise
 st.set_page_config(
     page_title="The Anchor",
     page_icon="⚓",
@@ -9,6 +8,7 @@ st.set_page_config(
 )
 
 import base64
+from modules import dashboard, meditation, exercise
 
 # --- CSS Injection ---
 def get_base64_of_bin_file(bin_file):
