@@ -7,21 +7,25 @@ import os
 
 # --- Firestore Setup ---
 # Check if app is already initialized to avoid errors on reload
+# Check if app is already initialized to avoid errors on reload
 if not firebase_admin._apps:
     try:
         # 1. Try Streamlit Secrets (Cloud / Production)
-        # Expected format: st.secrets["textkey"] contains the JSON string of the key
-        if "textkey" in st.secrets:
-            key_dict = json.loads(st.secrets["textkey"])
+        # Expected format: [firebase] table in secrets.toml
+        if "firebase" in st.secrets:
+            # st.secrets converts the TOML table to a dictionary-like object
+            # We can pass it directly to Certificate if it matches the structure
+            key_dict = dict(st.secrets["firebase"])
             cred = credentials.Certificate(key_dict)
             firebase_admin.initialize_app(cred)
         
-        # 2. Try Local File (Development)
+        # 2. Try Local File (Development backup)
         elif os.path.exists("firebase-key.json"):
             cred = credentials.Certificate("firebase-key.json")
             firebase_admin.initialize_app(cred)
         else:
-            st.warning("⚠️ firebase-key.json not found & no secrets. Using Offline Mode.")
+            st.warning("⚠️ Firebase credentials not found (checked secrets.toml and firebase-key.json). Using Offline Mode.")
+            
     except Exception as e:
         st.error(f"Failed to initialize Firebase: {e}")
 
