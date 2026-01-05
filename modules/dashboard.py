@@ -257,25 +257,30 @@ def show():
         ))
 
     # Layout for Dual Axis
-    fig.update_layout(
-        barmode='stack', # Stack minutes
-        yaxis=dict(
+    # We always set minutes axis. We only set yaxis2 if there's exercise data.
+    layout_kwargs = {
+        "barmode": 'stack',
+        "yaxis": dict(
             title="Duration (Minutes)",
             titlefont=dict(color="#ffffff"),
             tickfont=dict(color="#ffffff")
         ),
-        yaxis2=dict(
+        "legend": dict(x=0, y=1.1, orientation="h"),
+        "paper_bgcolor": "rgba(0,0,0,0)", 
+        "plot_bgcolor": "rgba(0,0,0,0)",
+        "margin": dict(l=0, r=0, t=30, b=0)
+    }
+
+    if not exercise_df.empty:
+        layout_kwargs["yaxis2"] = dict(
             title="Calories (Kcal)",
             titlefont=dict(color="#ff4b4b"),
             tickfont=dict(color="#ff4b4b"),
             overlaying="y",
             side="right"
-        ),
-        legend=dict(x=0, y=1.1, orientation="h"),
-        paper_bgcolor="rgba(0,0,0,0)", 
-        plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=0, r=0, t=30, b=0)
-    )
+        )
+    
+    fig.update_layout(**layout_kwargs)
     st.plotly_chart(fig, use_container_width=True)
 
 
