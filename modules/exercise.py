@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import datetime
 from utils import save_exercise_session
 
 def show():
@@ -27,9 +28,6 @@ def show():
         cols = st.columns(3)
         for i, activity in enumerate(activities):
             with cols[i % 3]:
-                # Using a container as a card click
-                # Streamlit buttons don't support much styling without custom components, 
-                # so we use simple buttons with generic styling for now.
                 if st.button(f"🏃 {activity}", key=activity, use_container_width=True):
                     st.session_state['ex_activity'] = activity
                     st.rerun()
@@ -39,60 +37,75 @@ def show():
         activity = st.session_state['ex_activity']
         st.caption(f"Protocol Active: {activity}")
         
-        col1, col2 = st.columns([1, 2])
+        # Single column layout for better mobile focus
+        container = st.container(border=True)
         
-        with col1:
-            st.markdown("### Timer Control")
+        with container:
+            st.markdown(f"### {activity}")
             
-            # Start Button
-            if st.session_state['ex_start_time'] is None:
-                if st.button("▶ START", type="primary", use_container_width=True):
-                    st.session_state['ex_start_time'] = time.time()
-                    st.rerun()
-            else:
-                # Stop Button
-                if st.button("⏹ STOP", type="secondary", use_container_width=True):
+            # TIMER SECTION
+            if st.session_state['ex_start_time'] is not None:
+                # Timer is RUNNING
+                elapsed_sec = int(time.time() - st.session_state['ex_start_time'])
+                mm, ss = divmod(elapsed_sec, 60)
+                hh, mm = divmod(mm, 60)
+                timer_str = f"{hh:02d}:{mm:02d}:{ss:02d}"
+                
+                st.markdown(f"<h1 style='text-align: center; color: #ff4b4b;'>{timer_str}</h1>", unsafe_allow_html=True)
+                st.info("⏱ Operation in progress...")
+                
+                if st.button("⏹ STOP & REVIEW", type="secondary", use_container_width=True):
                     end_time = time.time()
                     elapsed = end_time - st.session_state['ex_start_time']
                     st.session_state['ex_duration'] = int(elapsed / 60) # Minutes
                     st.session_state['ex_start_time'] = None # Reset Timer
                     st.rerun()
                 
-                # Show running status with live timer
-                elapsed_sec = int(time.time() - st.session_state['ex_start_time'])
-                mm, ss = divmod(elapsed_sec, 60)
-                hh, mm = divmod(mm, 60)
-                timer_str = f"{hh:02d}:{mm:02d}:{ss:02d}"
-                
-                st.info(f"⏱ Timer Running: **{timer_str}**")
-                
                 # Auto-refresh loop
                 time.sleep(1)
                 st.rerun()
-
-        with col2:
-            st.markdown("### Log Details")
-            
-            with st.form("workout_form"):
-                duration = st.number_input(
-                    "Duration (Minutes)", 
-                    min_value=1, 
-                    value=max(1, st.session_state['ex_duration'])
-                )
-                calories = st.number_input("Calories Burned", min_value=0, step=10)
                 
-                submitted = st.form_submit_button("Save Workout Log")
-                if submitted:
-                    if save_exercise_session(activity, duration, calories):
-                        st.success(f"Saved {activity} - {duration} mins.")
-                        # Reset
-                        st.session_state['ex_activity'] = None
-                        st.session_state['ex_duration'] = 0
-                        time.sleep(1)
-                        st.rerun()
+            elif st.session_state['ex_duration'] == 0:
+                # Timer is IDLE (not started yet)
+                st.markdown("<h1 style='text-align: center; color: #8b949e;'>00:00:00</h1>", unsafe_allow_html=True)
+                if st.button("▶ START SESSION", type="primary", use_container_width=True):
+                    st.session_state['ex_start_time'] = time.time()
+                    st.rerun()
+            
+            else:
+                # Timer is STOPPED (Review & Save mode)
+                st.success(f"Session Stopped. Total: {st.session_state['ex_duration']} minutes.")
+                
+                with st.form("quick_save_form"):
+                    st.markdown("### Finalize Log")
+                    duration = st.number_input(
+                        "Confirm Duration (Minutes)", 
+                        min_value=1, 
+                        value=max(1, st.session_state['ex_duration'])
+                    )
+                    calories = st.number_input("Calories Burned (Estimated)", min_value=0, step=10, value=int(duration * 7)) # Default 7 cal/min
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        submitted = st.form_submit_button("✅ SAVE & SYNC", use_container_width=True)
+                    with col2:
+                        if st.form_submit_button("🗑 DISCARD", use_container_width=True):
+                            st.session_state['ex_activity'] = None
+                            st.session_state['ex_duration'] = 0
+                            st.rerun()
+
+                    if submitted:
+                        if save_exercise_session(activity, duration, calories):
+                            st.success(f"Data synchronized to Dashboard.")
+                            # Reset
+                            st.session_state['ex_activity'] = None
+                            st.session_state['ex_duration'] = 0
+                            time.sleep(1)
+                            st.rerun()
 
         st.markdown("---")
-        if st.button("⬅ Cancel / Back"):
+        if st.button("⬅ Cancel / Change Activity"):
             st.session_state['ex_activity'] = None
             st.session_state['ex_start_time'] = None
+            st.session_state['ex_duration'] = 0
             st.rerun()
