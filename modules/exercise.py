@@ -58,8 +58,17 @@ def show():
                     st.session_state['ex_start_time'] = None # Reset Timer
                     st.rerun()
                 
-                # Show running status
-                st.info("⏱ Timer Running...")
+                # Show running status with live timer
+                elapsed_sec = int(time.time() - st.session_state['ex_start_time'])
+                mm, ss = divmod(elapsed_sec, 60)
+                hh, mm = divmod(mm, 60)
+                timer_str = f"{hh:02d}:{mm:02d}:{ss:02d}"
+                
+                st.info(f"⏱ Timer Running: **{timer_str}**")
+                
+                # Auto-refresh loop
+                time.sleep(1)
+                st.rerun()
 
         with col2:
             st.markdown("### Log Details")
