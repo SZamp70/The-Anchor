@@ -38,15 +38,15 @@ def inject_persistent_audio(b64_string, mime_type="audio/mp4", loop=False, eleme
     html_content = f"""
         <html>
         <body>
-            <audio autoplay {loop_attr} controls style="display:none;">
-                <source src="data:{mime_type};base64,{b64_string}" type="{mime_type}">
-            </audio>
-            <script>
-                // Optional: Ensure play if blocked?
-                var audio = document.querySelector('audio');
-                audio.volume = 1.0;
-                audio.play().catch(e => console.log("Autoplay blocked:", e));
-            </script>
+        <audio autoplay {loop_attr} controls style="display:none;">
+            <source src="data:{mime_type};base64,{b64_string}" type="{mime_type}">
+        </audio>
+        <script>
+            // Optional: Ensure play if blocked?
+            var audio = document.querySelector('audio');
+            audio.volume = 1.0;
+            audio.play().catch(e => console.log("Autoplay blocked:", e));
+        </script>
         </body>
         </html>
     """
@@ -57,9 +57,6 @@ def inject_persistent_audio(b64_string, mime_type="audio/mp4", loop=False, eleme
 
 def get_audio_path(filename):
     return f"assets/audio/{filename}"
-
-# Clock Component Removed
-# def show_clock(): ...
 
 def show():
     st.header("Deep Focus Operations")
@@ -72,21 +69,37 @@ def show():
     if 'phase_start_time' not in st.session_state:
         st.session_state['phase_start_time'] = 0
     
-    # --- IDLE SCREEN ---
+    # --- IDLE SCREEN (SELECTION) ---
     if st.session_state['med_state'] == 'idle':
-        st.info("Ensure sound is ON.")
-        if st.button("▶ START MISSION", type="primary", use_container_width=True):
-            st.session_state['med_state'] = 'running'
-            st.session_state['current_phase_index'] = 0
-            st.session_state['phase_start_time'] = time.time()
-            st.rerun()
+        
+        tab_live, tab_manual = st.tabs(["🧘 LIVE SESSION", "📝 MANUAL LOG"])
+        
+        with tab_live:
+            st.info("Ensure sound is ON.")
+            if st.button("▶ START MISSION", type="primary", use_container_width=True):
+                st.session_state['med_state'] = 'running'
+                st.session_state['current_phase_index'] = 0
+                st.session_state['phase_start_time'] = time.time()
+                st.rerun()
+                
+        with tab_manual:
+            st.markdown("### Manual Meditation Entry")
+            with st.form("manual_med_form"):
+                log_date = st.date_input("Date of Session", value=datetime.date.today())
+                log_minutes = st.number_input("Duration (Minutes)", min_value=1, value=15)
+                
+                if st.form_submit_button("💾 SAVE ENTRY", use_container_width=True):
+                    # Convert Date to Datetime
+                    dt_log = datetime.datetime.combine(log_date, datetime.time(12, 0))
+                    if save_meditation_session(log_minutes, custom_date=dt_log):
+                        st.success(f"Meditation log saved for {log_date}")
+                        time.sleep(1)
+                        st.rerun()
         return
 
     # --- RUNNING SCREEN ---
     
     # 1. Background Gong (Persistent Component)
-    # This component call must occur every rerun. 
-    # Because 'gong_b64' is constant, the iframe persists and audio loops continuously without restarting.
     gong_b64 = load_audio_b64(get_audio_path("Gong Semplice.mp3"))
     inject_persistent_audio(gong_b64, mime_type="audio/mp3", loop=True, element_id="bg_gong")
 
@@ -105,16 +118,10 @@ def show():
     current_phase = PHASES[idx]
 
     # 3. Voice Audio (Persistent for Phase duration)
-    # We call this every rerun. 
-    # If the 'audio_b64' is the SAME (i.e. we are in the same phase), the iframe persists.
-    # The audio plays once (autoplay). Since the iframe persists, it doesn't restart every 1s.
-    # When phase changes, 'current_phase["audio"]' changes -> new b64 -> new iframe -> plays new audio.
     if current_phase["audio"]:
         audio_b64 = load_audio_b64(get_audio_path(current_phase["audio"]))
         inject_persistent_audio(audio_b64, mime_type="audio/mp4", loop=False, element_id=f"voice_{current_phase['name']}")
     else:
-        # If no audio for this phase (e.g. Breathing), we render nothing or an empty placeholder 
-        # to ensure the tree structure changes and the previous audio iframe is removed (stopping previous audio).
         components.html("<html></html>", height=0)
 
     # 4. Countdown Logic
@@ -138,7 +145,6 @@ def show():
                 st.progress(0)
         
         with c2:
-            # Align vertically
             st.write("")
             st.write("")
             if i < idx:
@@ -150,9 +156,6 @@ def show():
                     st.rerun()
             else:
                 st.write("-")
-
-    # Clock Removed as requested
-    # show_clock() call removed
 
     # 6. Auto-Advance Logic
     if remaining <= 0:
