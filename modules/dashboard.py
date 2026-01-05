@@ -170,7 +170,8 @@ def show():
             x=med_daily['datetime'],
             y=med_daily['duration_minutes'],
             name="Meditation (min)",
-            marker_color='#2ea043'
+            marker_color='#2ea043',
+            offsetgroup=1 # Ensure bars are side-by-side
         ), secondary_y=False)
 
     # 2. Exercise Minutes (Primary Y)
@@ -180,7 +181,8 @@ def show():
             x=ex_daily['datetime'],
             y=ex_daily['duration_minutes'],
             name="Exercise (min)",
-            marker_color='#db6d28'
+            marker_color='#db6d28',
+            offsetgroup=2 # Ensure bars are side-by-side
         ), secondary_y=False)
         
         # 3. Exercise Calories (Secondary Y)
@@ -194,17 +196,24 @@ def show():
         ), secondary_y=True)
 
     fig.update_layout(
-        barmode='stack',
+        barmode='group', # Side-by-side bars
         template="plotly_dark",
-        legend=dict(x=0, y=1.1, orientation="h"),
+        font=dict(color="white"), # Force white text for all chart elements
+        legend=dict(
+            x=0, 
+            y=1.1, 
+            orientation="h",
+            font=dict(color="white"),
+            bgcolor="rgba(0,0,0,0)" # Ensure transparent background doesn't hide text
+        ),
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=0, r=0, t=30, b=0)
     )
 
-    fig.update_yaxes(title_text="Minutes", secondary_y=False)
+    fig.update_yaxes(title_text="Minutes", secondary_y=False, titlefont=dict(color="white"), tickfont=dict(color="white"))
     if has_seconds:
-        fig.update_yaxes(title_text="Calories", secondary_y=True)
+        fig.update_yaxes(title_text="Calories", secondary_y=True, titlefont=dict(color="#ff4b4b"), tickfont=dict(color="#ff4b4b"))
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -223,7 +232,12 @@ def show():
                 template="plotly_dark",
                 color_discrete_sequence=px.colors.qualitative.Pastel
             )
-            fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            fig_pie.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", 
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="white"),
+                legend=dict(font=dict(color="white"))
+            )
             st.plotly_chart(fig_pie, use_container_width=True)
         else:
             st.info("No exercise data available for pie chart.")
