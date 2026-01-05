@@ -11,6 +11,7 @@ st.set_page_config(
 
 import base64
 from modules import dashboard, meditation, exercise
+import streamlit.components.v1 as components
 
 # --- CSS Injection ---
 def get_base64_of_bin_file(bin_file):
@@ -46,6 +47,60 @@ def local_css(file_name):
 
 local_css("styles.css")
 
+# --- Persistent JS Component (Wake Lock & Auth Persistence) ---
+def inject_session_manager():
+    # This component stays active across reruns if called in both show_login and show_app
+    # It handles Screen Wake Lock and persists the 'authenticated' state in localStorage
+    js_code = f"""
+    <script>
+    // 1. Screen Wake Lock
+    let wakeLock = null;
+    const requestWakeLock = async () => {{
+        try {{
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock is active');
+        }} catch (err) {{
+            console.error(`${{err.name}}, ${{err.message}}`);
+        }}
+    }};
+
+    if ('wakeLock' in navigator) {{
+        requestWakeLock();
+        // Re-request when visible again
+        document.addEventListener('visibilitychange', async () => {{
+            if (wakeLock !== null && document.visibilityState === 'visible') {{
+                requestWakeLock();
+            }}
+        }});
+    }}
+
+    // 2. Auth Persistence
+    const MASTER_PASSWORD = "papera70"; // Sync with Python
+    
+    // Check if we need to auto-login
+    const savedAuth = localStorage.getItem('anchor_authenticated');
+    const urlParams = new URLSearchParams(window.location.search);
+    const isAutoLogin = urlParams.get('autologin');
+
+    if (savedAuth === 'true' && !isAutoLogin && !window.location.hash.includes('authenticated=true')) {{
+        // Use query param to signal auto-login to Streamlit
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('autologin', 'true');
+        window.location.href = newUrl.href;
+    }}
+
+    function setAuth(status) {{
+        localStorage.setItem('anchor_authenticated', status);
+    }}
+
+    // Listen for messages from Streamlit if needed, or just poll
+    // For now, we'll just check the state and expose helper
+    window.setAnchorAuth = setAuth;
+    </script>
+    """
+    components.html(js_code, height=0)
+
+
 # --- Authentication Constants ---
 MASTER_PASSWORD = "papera70"
 
@@ -55,6 +110,14 @@ if 'authenticated' not in st.session_state:
 
 # --- Main App Logic ---
 def main():
+    inject_session_manager()
+    
+    # Auto-login check
+    if not st.session_state['authenticated']:
+        if st.query_params.get("autologin") == "true":
+            st.session_state['authenticated'] = True
+            st.rerun()
+    
     if not st.session_state['authenticated']:
         show_login()
     else:
@@ -76,6 +139,8 @@ def show_login():
         if st.button("Enter Operations"):
             if password == MASTER_PASSWORD:
                 st.session_state['authenticated'] = True
+                # Inject JS to save to localStorage
+                components.html(f"<script>localStorage.setItem('anchor_authenticated', 'true');</script>", height=0)
                 st.rerun()
             else:
                 st.error("Access Denied")
@@ -98,6 +163,8 @@ def show_app():
         st.markdown("---")
         if st.button("Logout"):
             st.session_state['authenticated'] = False
+            # Inject JS to clear localStorage
+            components.html(f"<script>localStorage.setItem('anchor_authenticated', 'false');</script>", height=0)
             st.rerun()
 
     # Module Loading
