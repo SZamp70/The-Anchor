@@ -37,15 +37,11 @@ def show():
         activity = st.session_state['ex_activity']
         st.caption(f"Protocol Active: {activity}")
         
-        # Single column layout for better mobile focus
-        container = st.container(border=True)
-        
-        with container:
-            st.markdown(f"### {activity}")
-            
-            # TIMER SECTION
-            if st.session_state['ex_start_time'] is not None:
-                # Timer is RUNNING
+        # If timer is running, we show ONLY the timer to focus the user
+        if st.session_state['ex_start_time'] is not None:
+            container = st.container(border=True)
+            with container:
+                st.markdown(f"### {activity}")
                 elapsed_sec = int(time.time() - st.session_state['ex_start_time'])
                 mm, ss = divmod(elapsed_sec, 60)
                 hh, mm = divmod(mm, 60)
@@ -64,16 +60,12 @@ def show():
                 # Auto-refresh loop
                 time.sleep(1)
                 st.rerun()
-                
-            elif st.session_state['ex_duration'] == 0:
-                # Timer is IDLE (not started yet)
-                st.markdown("<h1 style='text-align: center; color: #8b949e;'>00:00:00</h1>", unsafe_allow_html=True)
-                if st.button("▶ START SESSION", type="primary", use_container_width=True):
-                    st.session_state['ex_start_time'] = time.time()
-                    st.rerun()
-            
-            else:
-                # Timer is STOPPED (Review & Save mode)
+        
+        # If exercise is stopped but not yet saved (Review mode)
+        elif st.session_state['ex_duration'] > 0:
+            container = st.container(border=True)
+            with container:
+                st.markdown(f"### {activity}")
                 st.success(f"Session Stopped. Total: {st.session_state['ex_duration']} minutes.")
                 
                 with st.form("quick_save_form"):
@@ -83,7 +75,7 @@ def show():
                         min_value=1, 
                         value=max(1, st.session_state['ex_duration'])
                     )
-                    calories = st.number_input("Calories Burned (Estimated)", min_value=0, step=10, value=int(duration * 7)) # Default 7 cal/min
+                    calories = st.number_input("Calories Burned", min_value=0, step=10, value=int(duration * 7))
                     
                     col1, col2 = st.columns(2)
                     with col1:
@@ -96,15 +88,41 @@ def show():
 
                     if submitted:
                         if save_exercise_session(activity, duration, calories):
-                            st.success(f"Data synchronized to Dashboard.")
-                            # Reset
+                            st.success(f"Data synchronized.")
                             st.session_state['ex_activity'] = None
                             st.session_state['ex_duration'] = 0
                             time.sleep(1)
                             st.rerun()
 
+        # IDLE Mode: Choice between Timer and Manual Entry
+        else:
+            tab_timer, tab_manual = st.tabs(["⏱ LIVE TIMER", "📝 MANUAL LOG"])
+            
+            with tab_timer:
+                st.markdown(f"### Live {activity}")
+                st.markdown("<h1 style='text-align: center; color: #8b949e;'>00:00:00</h1>", unsafe_allow_html=True)
+                if st.button("▶ START SESSION", type="primary", use_container_width=True):
+                    st.session_state['ex_start_time'] = time.time()
+                    st.rerun()
+            
+            with tab_manual:
+                st.markdown(f"### Manual Entry: {activity}")
+                with st.form("manual_log_form"):
+                    log_date = st.date_input("Date of Exercise", value=datetime.date.today())
+                    log_minutes = st.number_input("Duration (Minutes)", min_value=1, value=30)
+                    log_calories = st.number_input("Calories Burned", min_value=0, step=10, value=int(log_minutes * 7))
+                    
+                    if st.form_submit_button("💾 SAVE MANUAL ENTRY", use_container_width=True):
+                        # Convert Date to Datetime (Streamlit date_input returns datetime.date)
+                        dt_log = datetime.datetime.combine(log_date, datetime.time(12, 0))
+                        if save_exercise_session(activity, log_minutes, log_calories, custom_date=dt_log):
+                            st.success(f"Manual log saved for {log_date}")
+                            st.session_state['ex_activity'] = None
+                            time.sleep(1)
+                            st.rerun()
+
         st.markdown("---")
-        if st.button("⬅ Cancel / Change Activity"):
+        if st.button("⬅ Back to Protocols"):
             st.session_state['ex_activity'] = None
             st.session_state['ex_start_time'] = None
             st.session_state['ex_duration'] = 0
