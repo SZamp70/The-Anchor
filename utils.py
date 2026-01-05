@@ -117,12 +117,17 @@ def get_logs(start_date=None, end_date=None, limit=None):
     
     return logs
 
-def save_meditation_session(duration_minutes):
-    return save_log({
+def save_meditation_session(duration_minutes, custom_date=None):
+    log_data = {
         "type": "meditation",
         "duration_minutes": duration_minutes,
-        "completed_at": datetime.datetime.now()
-    })
+        "completed_at": custom_date if custom_date else datetime.datetime.now()
+    }
+    
+    if custom_date:
+        log_data['date_str'] = custom_date.strftime("%Y-%m-%d")
+        
+    return save_log(log_data)
 
 def save_exercise_session(activity_type, duration_minutes, calories, custom_date=None):
     log_data = {
