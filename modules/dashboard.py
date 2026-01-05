@@ -211,9 +211,9 @@ def show():
         margin=dict(l=0, r=0, t=30, b=0)
     )
 
-    fig.update_yaxes(title_text="Minutes", secondary_y=False, titlefont=dict(color="white"), tickfont=dict(color="white"))
+    fig.update_yaxes(title_text="Minutes", secondary_y=False, title_font=dict(color="white"), tick_font=dict(color="white"))
     if has_seconds:
-        fig.update_yaxes(title_text="Calories", secondary_y=True, titlefont=dict(color="#ff4b4b"), tickfont=dict(color="#ff4b4b"))
+        fig.update_yaxes(title_text="Calories", secondary_y=True, title_font=dict(color="#ff4b4b"), tick_font=dict(color="#ff4b4b"))
 
     st.plotly_chart(fig, use_container_width=True)
 
