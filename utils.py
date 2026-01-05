@@ -57,8 +57,9 @@ def save_log(data: dict):
     Saves a dictionary of data to Firestore with a timestamp.
     Falls back to simple session_state storage if DB is unavailable.
     """
-    # Timestamp generation
-    data['date_str'] = datetime.datetime.now().strftime("%Y-%m-%d")
+    # Timestamp generation (if not already provided)
+    if 'date_str' not in data:
+        data['date_str'] = datetime.datetime.now().strftime("%Y-%m-%d")
     
     # Try Cloud Firestore
     if db is not None and not st.session_state.get('force_offline', False):
@@ -123,11 +124,16 @@ def save_meditation_session(duration_minutes):
         "completed_at": datetime.datetime.now()
     })
 
-def save_exercise_session(activity_type, duration_minutes, calories):
-    return save_log({
+def save_exercise_session(activity_type, duration_minutes, calories, custom_date=None):
+    log_data = {
         "type": "exercise",
         "activity": activity_type,
         "duration_minutes": duration_minutes,
         "calories": calories,
-        "completed_at": datetime.datetime.now()
-    })
+        "completed_at": custom_date if custom_date else datetime.datetime.now()
+    }
+    
+    if custom_date:
+        log_data['date_str'] = custom_date.strftime("%Y-%m-%d")
+        
+    return save_log(log_data)
