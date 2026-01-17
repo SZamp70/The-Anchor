@@ -166,8 +166,8 @@ def show():
                         st.success(f"Manual log saved for {log_date}")
                         st.session_state['ex_activity'] = None
                         # Reset values for next manual entry
-                        st.session_state['man_duration'] = 30
-                        st.session_state['man_calories'] = 210
+                        del st.session_state['man_duration']
+                        del st.session_state['man_calories']
                         time.sleep(1)
                         st.rerun()
 
