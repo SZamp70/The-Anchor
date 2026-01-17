@@ -101,7 +101,9 @@ def get_logs(start_date=None, end_date=None, limit=None):
             docs = query.get(timeout=5)
             for doc in docs:
                 log_data = doc.to_dict()
-                if 'timestamp' in log_data and log_data['timestamp']:
+                if 'completed_at' in log_data and log_data['completed_at']:
+                    log_data['datetime'] = log_data['completed_at']
+                elif 'timestamp' in log_data and log_data['timestamp']:
                     log_data['datetime'] = log_data['timestamp']
                 logs.append(log_data)
         except Exception as e:
